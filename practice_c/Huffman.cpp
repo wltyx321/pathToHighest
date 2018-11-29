@@ -162,23 +162,29 @@ int HuffZip::zip() {
 	long long fLen = sourceFile.tellg();
 	sourceFile.seekg(0, ios::beg);
 	unsigned char temp;
-	code = "";
+	char mask[] = { 128,64,32,16,8,4,2,1 };
+	unsigned char buffer = 1 << 8; int bufferIter = 0;
 	for (int i = 0; i < fLen; i++) {
 		temp = sourceFile.get();
 		vector<int>* codeArray = &valCodeMap[temp];
 		//第一个元素是weight所以从第二个元素开始
 		for (int iter = 1; iter < codeArray->size(); iter++) {
-			code = code + to_string((*codeArray)[iter]);
+			if ((*codeArray)[iter]) {
+				buffer <<= 1;
+				buffer = buffer | 1;
+				bufferIter++;
+			}
+			else {
+				buffer <<= 1;
+				bufferIter++;
+			}
+			if (bufferIter == 8) {
+				char out = (char)buffer;
+				codeFile.write(&out, 1);
+				bufferIter = 0;
+				buffer = 1 << 8;
+			}
 		}
-		while (code.length() >= 8) {
-			char buffer = bitOperator(code.substr(0, 8));
-			codeFile.write(&buffer, 1);
-			code = code.length() == 8 ? "" : code.substr(8);
-		}
-	}
-	if (code.length() != 0) {
-		char buffer = bitOperator(code);
-		codeFile.write(&buffer, 1);
 	}
 	sourceFile.close();
 	codeFile.close();
