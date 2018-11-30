@@ -162,27 +162,35 @@ int HuffZip::zip() {
 	long long fLen = sourceFile.tellg();
 	sourceFile.seekg(0, ios::beg);
 	unsigned char temp;
-	char mask[] = { 128,64,32,16,8,4,2,1 };
-	unsigned char buffer = 1 << 8; int bufferIter = 0;
-	for (int i = 0; i < fLen; i++) {
-		temp = sourceFile.get();
-		vector<int>* codeArray = &valCodeMap[temp];
-		//第一个元素是weight所以从第二个元素开始
-		for (int iter = 1; iter < codeArray->size(); iter++) {
-			if ((*codeArray)[iter]) {
-				buffer <<= 1;
+	unsigned char buffer = 1 << 8; 
+	unsigned char mark=1;
+
+	map<unsigned char, string> valMap;
+	for (int i = 0; i < valCodeMap.size(); i++) {
+		valMap[i] = "";
+		for (int j = 0; j < valCodeMap[i].size(); j++) {
+			if (1 == valCodeMap[i][j]) {
+				valMap[i] = valMap[i] + '1';
+			}
+			else if (0 == valCodeMap[i][j]) {
+				valMap[i] = valMap[i] + '0';
+			}
+		}
+	}
+	while(!sourceFile.eof()){
+		sourceFile.read((char*)&temp, sizeof(unsigned char));
+		if (sourceFile.eof())
+			break;
+		for (char curr: valMap[temp]) {
+			buffer <<= 1;
+			mark <<= 1;
+			if ('1'==curr) {
 				buffer = buffer | 1;
-				bufferIter++;
 			}
-			else {
-				buffer <<= 1;
-				bufferIter++;
-			}
-			if (bufferIter == 8) {
-				char out = (char)buffer;
-				codeFile.write(&out, 1);
-				bufferIter = 0;
+			if (mark == 0) {
+				codeFile.write((char *)&buffer, 1);
 				buffer = 1 << 8;
+				mark = 0x01;
 			}
 		}
 	}
